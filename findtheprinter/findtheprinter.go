@@ -106,7 +106,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	_, err = exec.Command("/bin/systemctl", "restart", "cup").Output()
+	_, err = exec.Command("/bin/systemctl", "restart", "cups").Output()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Issue %s\n", err)
 		os.Exit(1)
@@ -115,12 +115,10 @@ func main() {
 }
 
 func getCurrentIP(b []byte) []byte {
-	element := []byte("DeviceURI ")
-	element1 := []byte("lpd://")
-	element2 := []byte(":515/PASSTHRU")
+	element := []byte("DeviceURI lpd://")
+	element1 := []byte(":515/PASSTHRU")
 
 	first := bytes.Replace(b, element, []byte{}, -1)
 	second := bytes.Replace(first, element1, []byte{}, -1)
-	third := bytes.Replace(second, element2, []byte{}, -1)
-	return third
+	return second
 }
