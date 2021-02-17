@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -78,7 +77,7 @@ func main() {
 	foundCurIP = strings.Replace(foundCurIP, "http://", "", -1)
 	foundCurIPb := []byte(foundCurIP)
 	var currentIP []byte
-	f, err := ioutil.ReadFile("/etc/cups/printers.conf")
+	f, err := os.ReadFile("/etc/cups/printers.conf")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Issue %s\n", err)
 		os.Exit(1)
@@ -100,7 +99,7 @@ func main() {
 
 	newFileBytes := bytes.ReplaceAll(f, currentIP, foundCurIPb)
 
-	err = ioutil.WriteFile("/etc/cups/printers.conf", newFileBytes, 600)
+	err = os.WriteFile("/etc/cups/printers.conf", newFileBytes, 600)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Issue %s\n", err)
 		os.Exit(1)
