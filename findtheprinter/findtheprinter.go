@@ -35,7 +35,7 @@ func main() {
 				<-maxParallel
 			}()
 			client := &http.Client{
-				Timeout: 2 * time.Second,
+				Timeout: 5 * time.Second,
 			}
 			curIP := "http://192.168.2." + iChar
 
