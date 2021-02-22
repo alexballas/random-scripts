@@ -34,14 +34,19 @@ func main() {
 			defer func() {
 				<-maxParallel
 			}()
+			try := 1
 			client := &http.Client{
 				Timeout: 5 * time.Second,
 			}
 			curIP := "http://192.168.2." + iChar
-
+		again:
 			resp, err := client.Get(curIP)
 
 			if err != nil {
+				if try == 1 {
+					try++
+					goto again
+				}
 				return
 			}
 
