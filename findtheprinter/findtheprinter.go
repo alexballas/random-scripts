@@ -22,7 +22,7 @@ func main() {
 	// our app.
 	foundChannel := make(chan struct{}, 1)
 	var foundCurIP string
-	timer := time.After(15 * time.Second)
+	timer := time.After(20 * time.Second)
 
 	for i := 1; i < 255; i++ {
 		iChar := strconv.Itoa(i)
@@ -37,7 +37,7 @@ func main() {
 			resp, err := client.Get(curIP)
 
 			if err != nil {
-				if try < 10 {
+				if try < 20 {
 					try++
 					time.Sleep(500 * time.Millisecond)
 					goto AGAIN
