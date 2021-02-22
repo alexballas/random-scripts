@@ -15,7 +15,6 @@ import (
 
 func main() {
 	found := false
-	maxParallel := make(chan struct{}, 50)
 	// we need at least capacity 1 since by
 	// the time we find the printer we dont
 	// want to block. The loop is probably still
@@ -23,29 +22,25 @@ func main() {
 	// our app.
 	foundChannel := make(chan struct{}, 1)
 	var foundCurIP string
-	timer := time.After(10 * time.Second)
+	timer := time.After(15 * time.Second)
 
 	for i := 1; i < 255; i++ {
 		iChar := strconv.Itoa(i)
 
-		maxParallel <- struct{}{}
-
 		go func() {
-			defer func() {
-				<-maxParallel
-			}()
 			try := 1
 			client := &http.Client{
-				Timeout: 5 * time.Second,
+				Timeout: 10 * time.Second,
 			}
 			curIP := "http://192.168.2." + iChar
-		again:
+		AGAIN:
 			resp, err := client.Get(curIP)
 
 			if err != nil {
-				if try == 1 {
+				if try < 10 {
 					try++
-					goto again
+					time.Sleep(500 * time.Millisecond)
+					goto AGAIN
 				}
 				return
 			}
