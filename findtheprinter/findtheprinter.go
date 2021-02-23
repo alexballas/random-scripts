@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -39,7 +39,7 @@ func main() {
 			if err != nil {
 				if try < 20 {
 					try++
-					time.Sleep(500 * time.Millisecond)
+					time.Sleep(1 * time.Second)
 					goto AGAIN
 				}
 				return
@@ -71,7 +71,7 @@ func main() {
 	}
 
 	if !found {
-		fmt.Fprintf(os.Stderr, "Issue %s\n", errors.New("No IP found"))
+		log.Fatalf("Issue %s\n", errors.New("No IP found"))
 		os.Exit(1)
 	}
 	foundCurIP = strings.Replace(foundCurIP, "http://", "", -1)
@@ -79,7 +79,7 @@ func main() {
 	var currentIP []byte
 	f, err := os.ReadFile("/etc/cups/printers.conf")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Issue %s\n", err)
+		log.Fatalf("Issue %s\n", err)
 		os.Exit(1)
 	}
 	buf := bufio.NewScanner(bytes.NewReader(f))
@@ -91,23 +91,23 @@ func main() {
 	}
 
 	if bytes.Equal(currentIP, foundCurIPb) {
-		fmt.Println("SAME IP, ALL GOOD!")
+		log.Println("SAME IP, ALL GOOD!")
 		os.Exit(0)
 	}
-	fmt.Println("Current IP: ", string(currentIP))
-	fmt.Println("New IP: ", string(foundCurIPb))
+	log.Println("Current IP: ", string(currentIP))
+	log.Println("New IP: ", string(foundCurIPb))
 
 	newFileBytes := bytes.ReplaceAll(f, currentIP, foundCurIPb)
 
 	err = os.WriteFile("/etc/cups/printers.conf", newFileBytes, 600)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Issue %s\n", err)
+		log.Fatalf("Issue %s\n", err)
 		os.Exit(1)
 	}
 
 	_, err = exec.Command("/bin/systemctl", "restart", "cups").Output()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Issue %s\n", err)
+		log.Fatalf("Issue %s\n", err)
 		os.Exit(1)
 	}
 
