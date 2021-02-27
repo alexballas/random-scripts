@@ -30,7 +30,7 @@ func main() {
 		go func() {
 			try := 1
 			client := &http.Client{
-				Timeout: 10 * time.Second,
+				Timeout: 3 * time.Second,
 			}
 			curIP := "http://192.168.2." + iChar
 		AGAIN:

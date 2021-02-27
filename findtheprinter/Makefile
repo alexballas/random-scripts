@@ -1,6 +1,6 @@
 LDFLAGS="-s -w"
 
-build:
+build: clean
 	go build -ldflags $(LDFLAGS) -o build/findtheprinter findtheprinter.go
 
 install:
