@@ -39,6 +39,15 @@ func main() {
 		if q.ID == "dsl_downstream" {
 			fmt.Println("DSL Down:  ", q.Value)
 		}
+		if q.ID == "dsl_upstream" {
+			fmt.Println("DSL Up:    ", q.Value)
+		}
+		if q.ID == "vdsl_atnd" {
+			fmt.Println("Att Down:  ", q.Value)
+		}
+		if q.ID == "vdsl_atnu" {
+			fmt.Println("Att Up:    ", q.Value)
+		}
 		if q.ID == "dsl_crc_errors" {
 			fmt.Println("CRC Errors:", q.Value)
 		}
