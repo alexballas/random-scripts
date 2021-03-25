@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	transit "github.com/alexballas/vaultlib/secrets"
+	"github.com/alexballas/vaultlib"
 )
 
 var (
@@ -14,7 +14,7 @@ var (
 )
 
 func main() {
-	transitclient := transit.NewTransitClient(vaultaddr, token, namespace)
+	transitclient := vaultlib.NewTransitClient(vaultaddr, token, namespace)
 	text := "Encode me please!"
 	cipher, _, err := transitclient.Encrypt(text)
 	check(err)
