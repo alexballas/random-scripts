@@ -26,12 +26,12 @@ func main() {
 
 	number, err := strconv.Atoi(numberstring)
 	if err != nil {
-		dlgs.Error("Error", "Xodrouli... mallon ekanes malakia. Prepei na baleis noumeraki")
+		dlgs.Error("Error", "Xodroulh... mallon ekanes malakia. Prepei na baleis noumeraki")
 		panic(err)
 	}
 
 	if number == 1 {
-		dlgs.Error("Error", "Xodrouli... bale kati megalytero apo 1")
+		dlgs.Error("Error", "Xodroulh... bale kati megalytero apo 1")
 		panic(err)
 	}
 
