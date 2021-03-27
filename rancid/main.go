@@ -48,12 +48,10 @@ func main() {
 	}
 
 	bufioo := bufio.NewScanner(file2)
-	num := 0
 	realcounter := 0
 	buf := new(bytes.Buffer)
 
 	for bufioo.Scan() {
-		num++
 		if scontains(bufioo.Bytes(), '(') {
 			continue
 		} else {
@@ -81,7 +79,6 @@ func main() {
 		dlgs.Error("Error", err.Error())
 		panic(err)
 	}
-
 }
 
 func scontains(s []byte, e rune) bool {
