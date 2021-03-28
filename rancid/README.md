@@ -1,4 +1,7 @@
 # Build
 Windows
 -----
-```env GOOS=windows GOARCH=amd64 go build -ldflags -H=windowsgui```
+```
+$ go get github.com/gen2brain/dlgs
+$ env GOOS=windows GOARCH=amd64 go build -ldflags -H=windowsgui
+```
