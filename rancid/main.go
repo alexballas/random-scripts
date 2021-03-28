@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -61,8 +60,10 @@ func main() {
 			buf.Reset()
 		}
 		if realcounter%number == 0 {
-			fmt.Fprintln(buf, bufioo.Text())
+			buf.Write(bufioo.Bytes())
+			buf.WriteString("\r\n")
 			newfile.Write(buf.Bytes())
+			buf.Reset()
 			continue
 		}
 		buf.Write(bufioo.Bytes())
