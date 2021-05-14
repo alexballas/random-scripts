@@ -68,7 +68,6 @@ func main() {
 		}
 	}
 	newfile.Write(buffer.Bytes())
-
 	stringpath, err := filepath.Abs("nice2.txt")
 	if err != nil {
 		dlgs.Error("Error", err.Error())
