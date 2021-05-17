@@ -1,4 +1,7 @@
-// RabbitMQ based chat server
+// RabbitMQ based chat server. Can horizontally scale.
+// This is just a proof of concept. You can easily deploy a
+// RabbitMQ instance by running the following:
+// docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
 package main
 
 import (
@@ -20,13 +23,15 @@ var (
 )
 
 type Payload struct {
-	User    net.Conn
-	Message string
+	IsAction bool
+	User     net.Conn
+	Message  string
 }
 
 type PayloadReceive struct {
-	User    string
-	Message string
+	IsAction bool
+	User     string
+	Message  string
 }
 
 func main() {
@@ -38,23 +43,52 @@ func main() {
 	check(err)
 	defer ch.Close()
 
-	messagesq, err := ch.QueueDeclare(
-		"messages", // name
-		false,      // durable
-		false,      // delete when unused
-		false,      // exclusive
-		false,      // no-wait
-		nil,        // arguments
+	ch2, err := conn.Channel()
+	check(err)
+	defer ch2.Close()
+
+	// Configured based on
+	// https://www.rabbitmq.com/tutorials/tutorial-three-go.html
+	// Will be used only for receiving
+	err = ch.ExchangeDeclare(
+		"msgexchange", // name
+		"fanout",      // type
+		true,          // durable
+		false,         // auto-deleted
+		false,         // internal
+		false,         // no-wait
+		nil,           // arguments
 	)
 	check(err)
 
-	actionq, err := ch.QueueDeclare(
-		"actions", // name
-		false,     // durable
-		false,     // delete when unused
-		false,     // exclusive
-		false,     // no-wait
-		nil,       // arguments
+	// Will be used only for publishing
+	err = ch2.ExchangeDeclare(
+		"msgexchange", // name
+		"fanout",      // type
+		true,          // durable
+		false,         // auto-deleted
+		false,         // internal
+		false,         // no-wait
+		nil,           // arguments
+	)
+	check(err)
+
+	messagesq, err := ch.QueueDeclare(
+		"",    // name
+		false, // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // arguments
+	)
+	check(err)
+
+	err = ch.QueueBind(
+		messagesq.Name, // queue name
+		"",             // routing key
+		"msgexchange",  // exchange
+		false,
+		nil,
 	)
 	check(err)
 
@@ -62,18 +96,16 @@ func main() {
 	check(err)
 
 	ticker := time.NewTicker(time.Second * 5)
-
 	go func() {
 		for range ticker.C {
 			mu.RLock()
 			fmt.Println("Current Users:", len(users))
 			mu.RUnlock()
 		}
-
 	}()
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
-
 	go func() {
 		for range c {
 			mu.RLock()
@@ -84,32 +116,25 @@ func main() {
 			}
 			mu.RUnlock()
 			os.Exit(0)
-
 		}
 	}()
 
 	go broadcastmsg(messagesq, ch)
-	go broadcastaction(actionq, ch)
+
 	for {
 		conn, err := a.Accept()
 		check(err)
-		go handleconn(conn, actionq, messagesq, ch)
-
+		go handleconn(conn, ch2)
 	}
 }
 
-func check(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
-func handleconn(conn net.Conn, action amqp.Queue, msg amqp.Queue, channel *amqp.Channel) {
+func handleconn(conn net.Conn, channel *amqp.Channel) {
 	defer conn.Close()
 
-	publishaction(action, channel, Payload{
-		User:    conn,
-		Message: "joined",
+	publishmsg(channel, Payload{
+		IsAction: true,
+		User:     conn,
+		Message:  "joined",
 	})
 
 	bf := bufio.NewScanner(conn)
@@ -118,17 +143,19 @@ func handleconn(conn net.Conn, action amqp.Queue, msg amqp.Queue, channel *amqp.
 		if len(text) == 0 {
 			continue
 		}
-		publishmsg(msg, channel, Payload{
-			User:    conn,
-			Message: text,
+
+		publishmsg(channel, Payload{
+			IsAction: false,
+			User:     conn,
+			Message:  text,
 		})
 	}
 
-	publishaction(action, channel, Payload{
-		User:    conn,
-		Message: "left",
+	publishmsg(channel, Payload{
+		IsAction: true,
+		User:     conn,
+		Message:  "left",
 	})
-
 }
 
 func broadcastmsg(msg amqp.Queue, channel *amqp.Channel) {
@@ -145,102 +172,72 @@ func broadcastmsg(msg amqp.Queue, channel *amqp.Channel) {
 	check(err)
 
 	for d := range msgs {
-		say := PayloadReceive{}
-		err := json.Unmarshal(d.Body, &say)
+		payload := PayloadReceive{}
+		err := json.Unmarshal(d.Body, &payload)
 		check(err)
-		mu.RLock()
-		for _, i := range users {
-			fmt.Fprintf(i, "%v: %v\n", say.User, say.Message)
-		}
-		mu.RUnlock()
-	}
-}
-
-func broadcastaction(action amqp.Queue, channel *amqp.Channel) {
-	actions, err := channel.Consume(
-		action.Name, // queue
-		"",          // consumer
-		true,        // auto-ack
-		false,       // exclusive
-		false,       // no-local
-		false,       // no-wait
-		nil,         // args
-	)
-	check(err)
-
-	for d := range actions {
-		action := PayloadReceive{}
-		err := json.Unmarshal(d.Body, &action)
-		check(err)
-
-		switch string(action.Message) {
-		case "joined":
-			mu.RLock()
-			for _, i := range users {
-				fmt.Fprintf(i, "%v joined\n", action.User)
+		if payload.IsAction {
+			switch string(payload.Message) {
+			case "joined":
+				mu.RLock()
+				for _, i := range users {
+					fmt.Fprintf(i, "%v joined\n", payload.User)
+				}
+				mu.RUnlock()
+			case "left":
+				mu.RLock()
+				for _, i := range users {
+					fmt.Fprintf(i, "%v left\n", payload.User)
+				}
+				mu.RUnlock()
 			}
-			mu.RUnlock()
-		case "left":
+		} else {
 			mu.RLock()
 			for _, i := range users {
-				fmt.Fprintf(i, "%v left\n", action.User)
+				fmt.Fprintf(i, "%v: %v\n", payload.User, payload.Message)
 			}
 			mu.RUnlock()
 		}
 	}
 }
 
-func publishmsg(msg amqp.Queue, channel *amqp.Channel, payload Payload) {
-	saytosend := PayloadReceive{
-		User:    fmt.Sprintf("%v", payload.User.RemoteAddr()),
-		Message: payload.Message,
-	}
-
-	b, err := json.Marshal(saytosend)
-	check(err)
-
-	err = channel.Publish(
-		"",       // exchange
-		msg.Name, // routing key
-		false,    // mandatory
-		false,    // immediate
-		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        b,
-		})
-	check(err)
-}
-
-func publishaction(action amqp.Queue, channel *amqp.Channel, payload Payload) {
+func publishmsg(channel *amqp.Channel, payload Payload) {
 	userId := fmt.Sprintf("%v", payload.User.RemoteAddr())
 
-	switch payload.Message {
-	case "joined":
-		mu.Lock()
-		users[userId] = payload.User
-		mu.Unlock()
-	case "left":
-		mu.Lock()
-		delete(users, userId)
-		mu.Unlock()
+	if payload.IsAction {
+		switch payload.Message {
+		case "joined":
+			mu.Lock()
+			users[userId] = payload.User
+			mu.Unlock()
+		case "left":
+			mu.Lock()
+			delete(users, userId)
+			mu.Unlock()
+		}
 	}
 
-	actiontosend := PayloadReceive{
-		User:    fmt.Sprintf("%v", payload.User.RemoteAddr()),
+	payloadtosend := PayloadReceive{
+		User:    userId,
 		Message: payload.Message,
 	}
 
-	b, err := json.Marshal(actiontosend)
+	b, err := json.Marshal(payloadtosend)
 	check(err)
 
 	err = channel.Publish(
-		"",          // exchange
-		action.Name, // routing key
-		false,       // mandatory
-		false,       // immediate
+		"msgexchange", // exchange
+		"",            // routing key
+		false,         // mandatory
+		false,         // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
 			Body:        b,
 		})
 	check(err)
+}
+
+func check(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
