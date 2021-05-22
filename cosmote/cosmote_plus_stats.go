@@ -42,6 +42,9 @@ func main() {
 		if q.ID == "dsl_upstream" {
 			fmt.Println("DSL Up:    ", q.Value)
 		}
+		if q.ID == "dsl_snr" {
+			fmt.Println("SNR:       ", q.Value)
+		}
 		if q.ID == "vdsl_atnd" {
 			fmt.Println("Att Down:  ", q.Value)
 		}
