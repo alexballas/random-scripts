@@ -12,15 +12,17 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+var (
+	button *widget.Button
+)
+
 func main() {
 	triggerButtonApp := app.New()
 	triggerButtonApp.Settings().SetTheme(theme.DarkTheme())
 	mainWindow := triggerButtonApp.NewWindow("Trigger Button")
 	status := widget.NewLabel("")
-	button := widget.NewButton("CLICK ME", func() {
-		status.Text = ""
-		status.Refresh()
-		trigger(status)
+	button = widget.NewButton("CLICK ME", func() {
+		go trigger(status)
 	})
 	text := container.New(layout.NewHBoxLayout(), layout.NewSpacer(), status, layout.NewSpacer())
 	content := container.New(layout.NewVBoxLayout(), layout.NewSpacer(), button, text, layout.NewSpacer())
@@ -31,13 +33,18 @@ func main() {
 }
 
 func trigger(status *widget.Label) {
+	button.Disable()
+	status.Text = ""
+	status.Refresh()
+
+	defer button.Enable()
+	defer status.Refresh()
+
 	client := http.Client{
 		Timeout: time.Duration(10 * time.Second),
 	}
 
 	req, err := http.NewRequest("GET", "http://192.168.88.240/trigger", nil)
-
-	defer status.Refresh()
 
 	if err != nil {
 		status.Text = err.Error()
