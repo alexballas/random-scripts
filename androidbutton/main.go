@@ -13,7 +13,9 @@ import (
 )
 
 var (
-	button *widget.Button
+	button         *widget.Button
+	clearTimer     *time.Timer
+	killgoroutines = make(chan struct{})
 )
 
 func main() {
@@ -33,6 +35,8 @@ func main() {
 }
 
 func trigger(status *widget.Label) {
+	go clearStatus(status)
+
 	button.Disable()
 	status.Text = ""
 	status.Refresh()
@@ -63,4 +67,20 @@ func trigger(status *widget.Label) {
 	}
 
 	status.Text = fmt.Sprintf("OK %s", resp.Header.Get("action"))
+}
+
+func clearStatus(status *widget.Label) {
+	if clearTimer != nil {
+		killgoroutines <- struct{}{}
+		clearTimer.Stop()
+	}
+	clearTimer = time.NewTimer(15 * time.Second)
+	select {
+	case <-clearTimer.C:
+		clearTimer = nil
+		status.Text = ""
+		status.Refresh()
+	case <-killgoroutines:
+		return
+	}
 }
