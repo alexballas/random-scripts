@@ -15,7 +15,7 @@ type responseJSON []struct {
 }
 
 func main() {
-	toJSON := &responseJSON{}
+	toJSON := responseJSON{}
 
 	client := http.Client{}
 	req, err := http.NewRequest("GET", "http://192.168.1.1/data/Status.json", nil)
@@ -26,7 +26,6 @@ func main() {
 			"el-GR,el;q=0.9,en;q=0.8",
 		},
 	}
-
 	resp, err := client.Do(req)
 	check(err)
 
@@ -35,7 +34,8 @@ func main() {
 
 	err = json.Unmarshal(jsondata, &toJSON)
 	check(err)
-	for _, q := range *toJSON {
+
+	for _, q := range toJSON {
 		if q.ID == "dsl_downstream" {
 			fmt.Println("DSL Down:  ", q.Value)
 		}

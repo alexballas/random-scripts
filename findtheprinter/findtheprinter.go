@@ -24,14 +24,16 @@ func main() {
 	var foundCurIP string
 	timer := time.After(20 * time.Second)
 
+	client := &http.Client{
+		Timeout: 3 * time.Second,
+	}
+
 	for i := 1; i < 255; i++ {
 		iChar := strconv.Itoa(i)
 
 		go func() {
 			try := 1
-			client := &http.Client{
-				Timeout: 3 * time.Second,
-			}
+
 			curIP := "http://192.168.2." + iChar
 		AGAIN:
 			resp, err := client.Get(curIP)
@@ -48,7 +50,6 @@ func main() {
 			defer resp.Body.Close()
 
 			buf := bufio.NewScanner(resp.Body)
-
 			for buf.Scan() {
 				if bytes.Contains(buf.Bytes(), []byte(`SEIKO EPSON`)) {
 					foundCurIP = curIP
@@ -71,7 +72,7 @@ func main() {
 	}
 
 	if !found {
-		log.Fatalf("Issue %s\n", errors.New("No IP found"))
+		log.Fatalf("Issue %s\n", errors.New("no IP found"))
 		os.Exit(1)
 	}
 	foundCurIP = strings.Replace(foundCurIP, "http://", "", -1)
@@ -99,7 +100,7 @@ func main() {
 
 	newFileBytes := bytes.ReplaceAll(f, currentIP, foundCurIPb)
 
-	err = os.WriteFile("/etc/cups/printers.conf", newFileBytes, 600)
+	err = os.WriteFile("/etc/cups/printers.conf", newFileBytes, 0600)
 	if err != nil {
 		log.Fatalf("Issue %s\n", err)
 		os.Exit(1)

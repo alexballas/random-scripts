@@ -51,7 +51,7 @@ func main() {
 	buf := new(bytes.Buffer)
 
 	for bufioo.Scan() {
-		if scontains(bufioo.Bytes(), '(') {
+		if bytes.ContainsRune(bufioo.Bytes(), '(') {
 			continue
 		} else {
 			realcounter++
@@ -80,14 +80,4 @@ func main() {
 		dlgs.Error("Error", err.Error())
 		panic(err)
 	}
-}
-
-func scontains(s []byte, e rune) bool {
-	z := byte(e)
-	for _, a := range s {
-		if a == z {
-			return true
-		}
-	}
-	return false
 }
