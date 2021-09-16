@@ -5,12 +5,13 @@ import (
 	"bytes"
 	"errors"
 	"log"
-	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/go-retryablehttp"
 )
 
 func main() {
@@ -24,29 +25,21 @@ func main() {
 	var foundCurIP string
 	timer := time.After(20 * time.Second)
 
-	client := &http.Client{
-		Timeout: 3 * time.Second,
-	}
-
 	for i := 1; i < 255; i++ {
 		iChar := strconv.Itoa(i)
 
 		go func() {
-			try := 1
+			retryClient := retryablehttp.NewClient()
+			retryClient.RetryMax = 5
+			retryClient.HTTPClient.Timeout = 3 * time.Second
+			retryClient.Logger = nil
+			client := retryClient.StandardClient()
 
 			curIP := "http://192.168.2." + iChar
-		AGAIN:
 			resp, err := client.Get(curIP)
-
 			if err != nil {
-				if try < 20 {
-					try++
-					time.Sleep(1 * time.Second)
-					goto AGAIN
-				}
 				return
 			}
-
 			defer resp.Body.Close()
 
 			buf := bufio.NewScanner(resp.Body)
