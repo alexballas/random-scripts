@@ -15,6 +15,7 @@ var (
 	joined = make(chan net.Conn)
 	left   = make(chan net.Conn)
 	users  = make(map[net.Conn]bool)
+	mu     sync.RWMutex
 )
 
 type Say struct {
@@ -30,7 +31,9 @@ func main() {
 
 	go func() {
 		for range ticker.C {
+			mu.RLock()
 			fmt.Println("Current Users:", len(users))
+			mu.RUnlock()
 		}
 
 	}()
@@ -39,11 +42,13 @@ func main() {
 
 	go func() {
 		for range c {
+			mu.RLock()
 			for user := range users {
 				fmt.Fprintf(user, "Terminating server..\n")
 				err := user.Close()
 				check(err)
 			}
+			mu.RUnlock()
 			os.Exit(0)
 
 		}
@@ -86,7 +91,6 @@ func handleconn(conn net.Conn) {
 }
 
 func broadcast() {
-	var mu sync.Mutex
 	for {
 		select {
 		case cur := <-msg:
