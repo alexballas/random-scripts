@@ -32,12 +32,12 @@ func main() {
 }
 
 type Counter struct {
-	io.ReadCloser
+	io.Reader
 	bytes uint64
 }
 
 func (c *Counter) Read(b []byte) (int, error) {
-	n, err := c.ReadCloser.Read(b)
+	n, err := c.Reader.Read(b)
 	atomic.AddUint64(&c.bytes, uint64(n))
 	return n, err
 }
