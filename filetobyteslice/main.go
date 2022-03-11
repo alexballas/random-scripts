@@ -27,8 +27,7 @@ func main() {
 	for _, q := range bytes {
 		el := strconv.FormatInt(int64(q), 16)
 		if len(el) == 1 {
-			build.WriteString("0x0")
-			build.WriteString(strings.ToUpper(el) + `, `)
+			build.WriteString(`0x0` + strings.ToUpper(el) + `, `)
 			continue
 		}
 
