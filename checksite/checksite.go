@@ -31,6 +31,7 @@ start:
 		chromedp.Navigate(`https://www.eopyykmes.gr/login.xhtml?viewId=/index.xhtml`),
 		// wait for footer element is visible (ie, page is loaded)
 		//chromedp.WaitVisible(`.form-signin`),
+
 		chromedp.WaitVisible(`.container`),
 		chromedp.ActionFunc(func(context.Context) error {
 			log.Printf(">>>>>>>>>>>>>>>>>>>> BOX1 IS VISIBLE")

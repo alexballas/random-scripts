@@ -10,7 +10,7 @@ import (
 
 func main() {
 	tik := time.NewTicker(1 * time.Second)
-	var start uint64 = 0
+	var start uint64
 
 	req, err := http.Get("http://ftp.bit.nl/pub/OpenBSD/7.0/amd64/install70.img")
 	if err != nil {
