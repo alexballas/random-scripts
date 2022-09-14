@@ -1,6 +1,6 @@
 module findtheprinter
 
-go 1.15
+go 1.16
 
 require (
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
