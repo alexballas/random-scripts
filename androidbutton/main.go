@@ -74,6 +74,7 @@ func clearStatus(status *widget.Label) {
 		killgoroutines <- struct{}{}
 		clearTimer.Stop()
 	}
+	
 	clearTimer = time.NewTimer(15 * time.Second)
 	select {
 	case <-clearTimer.C:

@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 )
@@ -15,24 +14,24 @@ type responseJSON []struct {
 }
 
 func main() {
-	toJSON := responseJSON{}
+	var toJSON responseJSON
 
-	client := http.Client{}
+	client := &http.Client{}
+
 	req, err := http.NewRequest("GET", "http://192.168.1.1/data/Status.json", nil)
 	check(err)
 
-	req.Header = map[string][]string{
+	req.Header = http.Header{
 		"Accept-Language": {
 			"el-GR,el;q=0.9,en;q=0.8",
 		},
 	}
+
 	resp, err := client.Do(req)
 	check(err)
+	defer resp.Body.Close()
 
-	jsondata, err := io.ReadAll(resp.Body)
-	check(err)
-
-	err = json.Unmarshal(jsondata, &toJSON)
+	err = json.NewDecoder(resp.Body).Decode(&toJSON)
 	check(err)
 
 	for _, q := range toJSON {
