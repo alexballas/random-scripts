@@ -16,14 +16,14 @@ func main() {
 // HERE
 
 `
+	var bufferPool = sync.Pool{
+		New: func() interface{} {
+			return new(bytes.Buffer)
+		},
+	}
+
 	if err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if strings.HasSuffix(path, ".go") && !d.IsDir() {
-			var bufferPool = sync.Pool{
-				New: func() interface{} {
-					return new(bytes.Buffer)
-				},
-			}
-
 			f1buffer := bufferPool.Get().(*bytes.Buffer)
 			defer bufferPool.Put(f1buffer)
 
