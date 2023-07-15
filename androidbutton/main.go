@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -19,12 +21,24 @@ var (
 )
 
 func main() {
+	r := &net.Resolver{
+		PreferGo: true,
+		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+			d := net.Dialer{
+				Timeout: time.Millisecond * time.Duration(10000),
+			}
+			return d.DialContext(ctx, network, "192.168.88.1:53")
+		},
+	}
+
+	targetIPs, _ := r.LookupHost(context.Background(), "wifibutton1")
+
 	triggerButtonApp := app.New()
 	triggerButtonApp.Settings().SetTheme(theme.DarkTheme())
 	mainWindow := triggerButtonApp.NewWindow("Trigger Button")
 	status := widget.NewLabel("")
 	button = widget.NewButton("CLICK ME", func() {
-		go trigger(status)
+		go trigger(targetIPs[0], status)
 	})
 	text := container.New(layout.NewHBoxLayout(), layout.NewSpacer(), status, layout.NewSpacer())
 	content := container.New(layout.NewVBoxLayout(), layout.NewSpacer(), button, text, layout.NewSpacer())
@@ -34,7 +48,7 @@ func main() {
 
 }
 
-func trigger(status *widget.Label) {
+func trigger(ip string, status *widget.Label) {
 	go clearStatus(status)
 
 	button.Disable()
@@ -48,13 +62,12 @@ func trigger(status *widget.Label) {
 		Timeout: time.Duration(10 * time.Second),
 	}
 
-	req, err := http.NewRequest("GET", "http://192.168.88.240/trigger", nil)
-
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/trigger", ip), nil)
+	req.Host = "wifibutton1"
 	if err != nil {
 		status.Text = err.Error()
 		return
 	}
-	req.Host = "wifibutton1"
 	resp, err := client.Do(req)
 	if err != nil {
 		status.Text = err.Error()
@@ -74,7 +87,7 @@ func clearStatus(status *widget.Label) {
 		killgoroutines <- struct{}{}
 		clearTimer.Stop()
 	}
-	
+
 	clearTimer = time.NewTimer(15 * time.Second)
 	select {
 	case <-clearTimer.C:

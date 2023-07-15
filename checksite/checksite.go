@@ -15,17 +15,17 @@ start:
 	log.Println("go !")
 	// create chrome instance
 
-	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+	/* 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", false),
-	)
+	) */
 
-	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	allocContext, cancel := chromedp.NewRemoteAllocator(context.Background(), "ws://127.0.0.1:9222/devtools/browser/b806f75d-353d-49ca-95b9-55096618da8b")
 	defer cancel()
+	/*
+		allocCtx, cancel := chromedp.NewExecAllocator(allocatorContext, opts...)
+		defer cancel() */
 
-	ctx, cancel2 := chromedp.NewContext(
-		allocCtx,
-		chromedp.WithLogf(log.Printf),
-	)
+	ctx, cancel2 := chromedp.NewContext(allocContext)
 	defer cancel2()
 
 	// create a timeout
@@ -40,6 +40,7 @@ start:
 		chromedp.WaitVisible(`.container`),
 		chromedp.ActionFunc(func(context.Context) error {
 			log.Printf(">>>>>>>>>>>>>>>>>>>> BOX1 IS VISIBLE")
+			time.Sleep(10 * time.Second)
 			return nil
 		}))
 

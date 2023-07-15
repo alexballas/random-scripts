@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"errors"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -32,7 +32,7 @@ func main() {
 			retryClient.Logger = nil
 			client := retryClient.StandardClient()
 
-			curIP := "http://192.168.2." + iChar
+			curIP := "http://192.168.1." + iChar
 
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, curIP, nil)
 			if err != nil {
@@ -60,7 +60,7 @@ func main() {
 	<-ctx.Done()
 
 	if !found {
-		log.Printf("Issue %s\n", errors.New("no IP found").Error())
+		log.Printf("Issue: no IP found\n")
 		os.Exit(1)
 	}
 
@@ -70,17 +70,27 @@ func main() {
 
 	f, err := os.ReadFile("/etc/cups/printers.conf")
 	if err != nil {
-		log.Printf("Issue %s\n", err)
+		log.Printf("Issue: %s\n", err)
 		os.Exit(1)
 	}
 
 	buf := bufio.NewScanner(bytes.NewReader(f))
 
+	var foundExistingIP bool
 	for buf.Scan() {
-		if bytes.Contains(buf.Bytes(), []byte(`DeviceURI lpd://192.168.2`)) {
-			currentIP = getCurrentIP(buf.Bytes())
+		if bytes.Contains(buf.Bytes(), []byte(`DeviceURI lpd://192.168`)) {
+			current := getCurrentIP(buf.Bytes())
+			if current != nil {
+				currentIP = []byte(current.String())
+				foundExistingIP = true
+			}
 			break
 		}
+	}
+
+	if !foundExistingIP {
+		log.Println("No previous match")
+		os.Exit(1)
 	}
 
 	if bytes.Equal(currentIP, foundCurIPb) {
@@ -95,22 +105,23 @@ func main() {
 
 	err = os.WriteFile("/etc/cups/printers.conf", newFileBytes, 0600)
 	if err != nil {
-		log.Printf("Issue %s\n", err)
+		log.Printf("Issue: %s\n", err)
 		os.Exit(1)
 	}
 
 	_, err = exec.Command("/bin/systemctl", "restart", "cups").Output()
 	if err != nil {
-		log.Printf("Issue %s\n", err)
+		log.Printf("Issue: %s\n", err)
 		os.Exit(1)
 	}
 }
 
-func getCurrentIP(b []byte) []byte {
+func getCurrentIP(b []byte) net.IP {
 	element := []byte("DeviceURI lpd://")
 	element1 := []byte(":515/PASSTHRU")
 
 	first := bytes.Replace(b, element, []byte{}, -1)
 	second := bytes.Replace(first, element1, []byte{}, -1)
-	return second
+
+	return net.ParseIP(string(second))
 }

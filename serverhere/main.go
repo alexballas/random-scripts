@@ -1,19 +1,28 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/go-chi/chi"
 )
 
 func main() {
+	mux := chi.NewRouter()
+	mux.Use(middle)
+	mux.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(".")).ServeHTTP(w, r)
+	})
 	server := http.Server{
-		Addr: ":8888",
+		Addr:    ":8888",
+		Handler: mux,
 	}
-	mux := http.NewServeMux()
-	server.Handler = middle(mux)
-	mux.Handle("/", http.FileServer(http.Dir(".")))
+
 	log.Printf("Starting Server on port %q\n", server.Addr)
-	server.ListenAndServe()
+	if err := server.ListenAndServe(); err != nil {
+		fmt.Println(err)
+	}
 }
 
 func middle(next http.Handler) http.Handler {

@@ -151,7 +151,8 @@ func main() {
 				}
 			}()
 
-			log.Println(stringb.String())
+			log.Println()
+			fmt.Println(stringb.String())
 		}
 
 		stringb.Reset()
