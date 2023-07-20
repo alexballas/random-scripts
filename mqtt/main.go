@@ -1,81 +1,53 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-func connect(clientId string, uri *url.URL) mqtt.Client {
-	opts := createClientOptions(clientId, uri)
-	client := mqtt.NewClient(opts)
-	token := client.Connect()
-	for !token.WaitTimeout(3 * time.Second) {
+func handleMessage(client mqtt.Client, msg mqtt.Message) {
+	num, err := strconv.Atoi(string(msg.Payload()))
+	if err != nil {
+		return
 	}
-	if err := token.Error(); err != nil {
-		log.Fatal(err)
+
+	switch {
+	case num >= 70:
+		log.Println("High", num)
+	case num < 70 && num >= 30:
+		log.Println("Mid", num)
+	case num < 30:
+		log.Println("Low", num)
 	}
-	return client
-}
-
-func createClientOptions(clientId string, uri *url.URL) *mqtt.ClientOptions {
-	opts := mqtt.NewClientOptions()
-	opts.AddBroker(fmt.Sprintf("tcp://%s", uri.Host))
-	return opts
-}
-
-func listen(uri *url.URL, topic string) {
-	client := connect("sub", uri)
-	client.Subscribe(topic, 0, func(client mqtt.Client, msg mqtt.Message) {
-		temps, _ := getTemp()
-		log.Printf("* [%s] %s %s", msg.Topic(), string(msg.Payload()), temps)
-	})
 }
 
 func main() {
-	uri, err := url.Parse("http://192.168.88.2:1883/ac")
+	uri, err := url.Parse("http://192.168.88.107:1883/shellies/button1/sensor/battery")
 	if err != nil {
 		log.Fatal(err)
 	}
 	topic := uri.Path[1:len(uri.Path)]
 
-	f, err := os.OpenFile("ac-temps.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		log.Fatalf("error opening file: %v", err)
-	}
-	defer f.Close()
-	log.SetOutput(f)
+	mqtt.ERROR = log.New(os.Stdout, "ERROR ", log.Ldate|log.Ltime)
+	mqtt.CRITICAL = log.New(os.Stdout, "CRITICAL ", log.Ldate|log.Ltime)
 
-	go listen(uri, topic)
+	opts := mqtt.NewClientOptions()
+	opts.SetMaxReconnectInterval(30 * time.Second)
+	opts.SetOnConnectHandler(func(client mqtt.Client) {
+		if token := client.Subscribe(topic, 0, handleMessage); token.Wait() && token.Error() == nil {
+			fmt.Println("Subscribed to", topic)
+		}
+	})
+
+	opts.AddBroker(fmt.Sprintf("tcp://%s", uri.Host))
+
+	mqtt.NewClient(opts).Connect()
+
 	select {}
-}
-
-func getTemp() (string, error) {
-	client := http.Client{}
-	req, err := http.NewRequest("GET", "http://192.168.88.3/", nil)
-	if err != nil {
-		return "", err
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	body = bytes.ReplaceAll(body, []byte("<br>"), []byte(" "))
-
-	return string(body), nil
 }
