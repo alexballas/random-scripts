@@ -75,7 +75,7 @@ type Items struct {
 
 func main() {
 	var key string
-	var lines int
+	var size int
 
 	stringb := new(strings.Builder)
 
@@ -142,9 +142,9 @@ func main() {
 			}
 		}
 
-		newLines := len(strings.Split(stringb.String(), "\n"))
-		if newLines > lines {
-			lines = newLines
+		newSize := stringb.Len()
+		if newSize > size {
+			size = newSize
 			go func() {
 				if err := playMP3Sound(); err != nil {
 					fmt.Println(err)

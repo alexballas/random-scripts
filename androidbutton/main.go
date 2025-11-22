@@ -21,6 +21,7 @@ var (
 )
 
 func main() {
+
 	r := &net.Resolver{
 		PreferGo: true,
 		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
@@ -31,14 +32,12 @@ func main() {
 		},
 	}
 
-	targetIPs, _ := r.LookupHost(context.Background(), "wifibutton1")
-
 	triggerButtonApp := app.New()
 	triggerButtonApp.Settings().SetTheme(theme.DarkTheme())
 	mainWindow := triggerButtonApp.NewWindow("Trigger Button")
 	status := widget.NewLabel("")
 	button = widget.NewButton("CLICK ME", func() {
-		go trigger(targetIPs[0], status)
+		go trigger(r, status)
 	})
 	text := container.New(layout.NewHBoxLayout(), layout.NewSpacer(), status, layout.NewSpacer())
 	content := container.New(layout.NewVBoxLayout(), layout.NewSpacer(), button, text, layout.NewSpacer())
@@ -48,7 +47,7 @@ func main() {
 
 }
 
-func trigger(ip string, status *widget.Label) {
+func trigger(r *net.Resolver, status *widget.Label) {
 	go clearStatus(status)
 
 	button.Disable()
@@ -58,11 +57,20 @@ func trigger(ip string, status *widget.Label) {
 	defer button.Enable()
 	defer status.Refresh()
 
+	timeOut, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	targetIPs, err := r.LookupHost(timeOut, "wifibutton1")
+	if err != nil {
+		status.Text = "DNS Failure"
+		return
+	}
+
 	client := http.Client{
 		Timeout: time.Duration(10 * time.Second),
 	}
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/trigger", ip), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/trigger", targetIPs[0]), nil)
 	req.Host = "wifibutton1"
 	if err != nil {
 		status.Text = err.Error()
@@ -85,7 +93,9 @@ func trigger(ip string, status *widget.Label) {
 func clearStatus(status *widget.Label) {
 	if clearTimer != nil {
 		killgoroutines <- struct{}{}
-		clearTimer.Stop()
+		if !clearTimer.Stop() {
+			<-clearTimer.C
+		}
 	}
 
 	clearTimer = time.NewTimer(15 * time.Second)
@@ -97,4 +107,5 @@ func clearStatus(status *widget.Label) {
 	case <-killgoroutines:
 		return
 	}
+
 }

@@ -28,7 +28,7 @@ func handleMessage(client mqtt.Client, msg mqtt.Message) {
 }
 
 func main() {
-	uri, err := url.Parse("http://192.168.88.107:1883/shellies/button1/sensor/battery")
+	uri, err := url.Parse("http://192.168.88.103:1883/shellies/button1/sensor/battery")
 	if err != nil {
 		log.Fatal(err)
 	}

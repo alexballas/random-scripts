@@ -78,7 +78,7 @@ func main() {
 
 	var foundExistingIP bool
 	for buf.Scan() {
-		if bytes.Contains(buf.Bytes(), []byte(`DeviceURI lpd://192.168`)) {
+		if bytes.Contains(buf.Bytes(), []byte(`DeviceURI lpd://192.168.1`)) {
 			current := getCurrentIP(buf.Bytes())
 			if current != nil {
 				currentIP = []byte(current.String())
